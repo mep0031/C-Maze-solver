@@ -1,0 +1,337 @@
+//Lab 3
+//Michael E. Phillips
+//Class: COMP 2710 Section 1
+//Date: November 8, 2014
+//E-Mail: mep0031@auburn.edu
+//Description:
+//This Program will read in a text file containing a format for a graph
+//It will find the shortest path between the start node and destination node
+//and print out the nodes within the path in order.
+#include <iostream>
+#include <istream>
+#include <stdio.h>
+#include <assert.h>
+#include <fstream>
+#include <vector>
+#include <sstream>
+#include <queue>
+#include <stack>
+
+using namespace std;
+
+class Node
+{
+private:
+    Node *attachedNodes[5];
+    string name;
+    int numberUsed;
+    Node *previous;
+    int marked;
+
+public:
+
+    Node(string nameIn)
+    {
+        name = nameIn;
+        numberUsed = 0;
+    }
+
+    Node()
+    {
+        numberUsed = 0;
+    }
+
+    int setNodeName(string newName)
+    {
+        name = newName;
+    }
+
+    string getNodeName()
+    {
+        return name;
+    }
+
+    void attachNewNode(Node *newNode, int index)
+    {
+        attachedNodes[index] = newNode;
+        setNumberUsed(getNumberUsed() + 1);
+    }
+
+    Node *getAttachedNode(int index)
+    {
+        return attachedNodes[index];
+    }
+
+    int getNumberUsed()
+    {
+        return numberUsed;
+    }
+
+    int setNumberUsed(int newNumberUsed)
+    {
+        numberUsed = newNumberUsed;
+        return 1;
+    }
+
+    void setPrevious(Node *previousNode)
+    {
+        previous = previousNode;
+    }
+
+    Node *getPrevious()
+    {
+        return previous;
+    }
+
+    int setMarked(int i)
+    {
+        marked = i;
+        return 1;
+    }
+
+    int getMarked()
+    {
+        return marked;
+    }
+
+
+
+};
+
+class System
+{
+private:
+
+    string path;
+    vector<Node> maze;
+    string startString;
+    string finishString;
+    Node *start;
+    Node *finish;
+
+public:
+
+
+
+    vector<Node> getMaze()
+    {
+        return maze;
+    }
+
+    Node * getStart()
+    {
+        return start;
+    }
+
+    Node * getFinish()
+    {
+        return finish;
+    }
+
+    int CreateGraph(string filenameIn)
+    {
+        int mazeSize = 0;
+        int i = 0;
+        int k = 0;
+        std::ifstream inStream;
+        stringstream stream;
+        string filename = filenameIn;
+        stringstream converter;
+        string currentNode;
+        string nodeToAttach;
+        string line;
+        string nodeToCreate;
+        string tempstring;
+
+        inStream.open(filename.c_str());
+        if(!inStream.is_open())
+        {
+            cout << "cannot open file";
+            return 0;
+        }
+        getline(inStream, line);
+        converter << line;
+        converter >> mazeSize;
+        maze.resize(mazeSize);
+        getline(inStream, line);
+        startString = line;
+        getline(inStream, line);
+        finishString = line;
+        while (!inStream.eof())  //this loop makes all of the nodes.  Doesn't attach them yet.
+        {
+            getline(inStream, line);
+            if(line.size() < 2)
+            {
+                break;
+            }
+            stream << line;
+            stream >> nodeToCreate;
+            //cout << line;
+            //cout << nodeToCreate;
+            maze[i] = Node(nodeToCreate);
+            i++;
+            stream.str("");
+        }
+
+        inStream.close();
+        stream.str("");
+        inStream.open(filename.c_str());
+        getline(inStream, line);
+        getline(inStream, line);
+        getline(inStream, line);
+        while (!inStream.eof())  //loop attaches the nodes correctly.
+        {
+            stream.clear();
+            stream.str("");
+            getline(inStream,line);
+            stream << line << endl;
+            //cout << line << endl;
+            //cout << currentNode << endl;
+            stream >> currentNode;
+            //cout << endl;
+            //cout << currentNode << " ";
+            k = 0;
+            while(!stream.eof())
+            {
+                stream >> nodeToAttach;
+                //cout << nodeToAttach;
+                findNode(currentNode)->attachNewNode(findNode(nodeToAttach), k);
+                //cout << findNode(currentNode)->getNodeName() << endl;
+                //cout << findNode(currentNode)->getAttachedNode(k)->getNodeName();
+                k++;
+            }
+
+        }
+
+        start = findNode(startString);
+        finish = findNode(finishString);
+        cout << "The Start Node is: " << getStart()->getNodeName() << "\n";
+        cout << "The Destination Node is: " << getFinish()->getNodeName() << "\n";
+
+
+        return 1;
+    }
+
+    Node * findNode(string nodeNameIn)
+    {
+        int i = 0;
+        while(i <= maze.size())
+        {
+            if(maze[i].getNodeName() == nodeNameIn)
+            {
+                return &maze[i];
+            }
+            else
+            {
+                i++;
+            }
+        }
+        if(i > maze.size())
+        {
+            cout << "error in file";
+        }
+        return &maze[i];
+    }
+
+    string solve(Node *startIn, Node *endIn)
+    {
+        queue<Node*> theQ;
+        string solution;
+        stack<Node*> pathStack;
+        string solutionFormat;
+        Node *n;
+        Node *m;
+        Node *l;
+        int i = 0;
+        int k = 0;
+        while(i < maze.size())
+        {
+            maze[i].setMarked(0);
+            maze[i].setPrevious(NULL);
+            i++;
+        }
+
+        theQ.push(startIn);
+        startIn->setMarked(1);
+        cout << "Nodes visited: ";
+        while(!theQ.empty())
+        {
+            n = theQ.front();
+            if(n->getNodeName() == finish->getNodeName()) //found destination node
+            {
+                while(n->getPrevious() != NULL)
+                {
+                    pathStack.push(n);
+                    n = n->getPrevious();
+                }
+                while(!pathStack.empty())
+                {
+                    solution = solution + pathStack.top()->getNodeName();
+                    solution = solution + " ";
+                    pathStack.pop();
+                }
+                solutionFormat = "Path is:\n " + getStart()->getNodeName();
+                solutionFormat = solutionFormat + " ";
+                solution = solutionFormat + solution;
+                solution = "\nCongratulations!\n" + solution;
+
+                return solution;
+            }
+            theQ.pop();
+            //cout << k << endl;
+            //cout << n->getNodeName() << endl;
+            //cout << n->getAttachedNode(k)->getNodeName() << endl;
+            k = 0;
+            while (k < n->getNumberUsed())
+            {
+                if(n->getNumberUsed() > 6)
+                {
+                    cout << "error in maze";
+                }
+                //cout << n->getNumberUsed();
+                m = n->getAttachedNode(k);
+                k++;
+                //cout << m->getNodeName();
+                if(!m->getMarked())
+                {
+                    m->setMarked(1);
+                    cout << m->getNodeName() << " ";
+                    m->setPrevious(n);
+                    theQ.push(m);
+                }
+            }
+        }
+        return "\n\nSorry, path not found.";
+    }
+
+};
+
+int main()
+{
+    System system;
+    string filename;
+    cout << "====================" << "\n|   Welcome to the Shortest Path Maze Solver!     |" << endl;
+    cout << "====================\n" << endl;
+    while(1 == 1)
+    {
+        cout << "\nEnter the name of the Maze configuration file: ";
+        cin >> filename;
+        if(filename == "Quit")
+        {
+            cout << "\nThank you for using the Maze Solver!";
+            return 1;
+        }
+        if(!system.CreateGraph(filename))
+        {
+            continue;
+        }
+        cout << "Finding the shortest path from the Start to Destination Node ..." << endl;
+        cout << endl;
+        //cout << "Path is: ";
+        cout << system.solve(system.getStart(), system.getFinish());
+
+
+    }
+    return 1;
+}
+
